@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 project(SfmlPuste LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -17,5 +17,5 @@ FetchContent_MakeAvailable(SFML)
 
 add_executable(main main.cpp
     )
-target_compile_features(main PRIVATE cxx_std_17)
+target_compile_features(main PRIVATE cxx_std_26)
 target_link_libraries(main PRIVATE SFML::Graphics)

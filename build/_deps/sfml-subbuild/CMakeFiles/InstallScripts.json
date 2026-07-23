@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/niko/Projekty/sfml-template/build/_deps/sfml-subbuild/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
