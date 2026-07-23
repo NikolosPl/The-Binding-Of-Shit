@@ -1,0 +1,55 @@
+{
+	"abstract" : true,
+	"backtrace" : 3,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"find_package"
+		],
+		"files" : 
+		[
+			"/usr/share/cmake/Modules/FindX11.cmake",
+			"build/_deps/sfml-src/src/SFML/Window/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 281,
+				"parent" : 0
+			},
+			{
+				"file" : 0,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 800,
+				"parent" : 2
+			}
+		]
+	},
+	"codemodelVersion" : 
+	{
+		"major" : 2,
+		"minor" : 11
+	},
+	"id" : "X11::SM::@5730451e331e3690ae65",
+	"imported" : true,
+	"local" : true,
+	"name" : "X11::SM",
+	"paths" : 
+	{
+		"build" : "_deps/sfml-build/src/SFML/Window",
+		"source" : "build/_deps/sfml-src/src/SFML/Window"
+	},
+	"sources" : [],
+	"type" : "UNKNOWN_LIBRARY"
+}
