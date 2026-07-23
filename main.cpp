@@ -14,7 +14,7 @@ public:
     sprite.setTexture(textureFRONT, true);
     sprite.setScale({.5f, .5f});
     sprite.setPosition({200.f, 100.f});
-    speed = 300.f;
+    speed = 400.f;
   }
   sf::Vector2f getCenter() const {
     sf::FloatRect bounds = sprite.getGlobalBounds();
@@ -60,8 +60,26 @@ public:
   }
   void draw(sf::RenderWindow &window) { window.draw(sprite); }
   void reset() { sprite.setPosition({200.f, 100.f}); }
+  void takeDamage() {
+    if(invulnerabilityTimer <= 0.f){
+      hp--;
+      invulnerabilityTimer = invulnerabilityDuration;
+    }
+  }
+  bool isDead() const { return hp <= 0; }
+  sf::FloatRect getBounds() const { return sprite.getGlobalBounds(); }
+  int getHp() const { return hp; }
+  void updateTimers(float dt){
+    if(invulnerabilityTimer > 0.f){
+      invulnerabilityTimer -= dt;
+    }
+  }
 
 private:
+  int hp = 3;
+  const int maxHp = 3;
+  float invulnerabilityTimer = 0.f;
+  const float invulnerabilityDuration = 1.f;
   sf::Texture textureFRONT;
   sf::Texture textureBACK;
   sf::Texture textureLEFT;
@@ -106,6 +124,8 @@ class Projectile {
     }
 
     bool isDead() const { return state == State::Dead; };
+
+    sf::FloatRect getBounds() const { return shape.getGlobalBounds(); }
   private:
     enum class State { Flying, Falling, Dead };
     State state = State::Flying;
@@ -118,7 +138,37 @@ class Projectile {
     float elapsed = 0.f;
 };
 
+class Enemy {
+  public:
+    Enemy(sf::Vector2f startPos) : shape(20.f){
+      shape.setFillColor(sf::Color::Red);
+      shape.setOrigin({20.f,20.f});
+      shape.setPosition(startPos);
+    }
+    void update(float dt, sf::Vector2f playerCenter){
+      sf::Vector2f toPlayer = playerCenter - shape.getPosition();
+      float length = std::sqrt(toPlayer.x * toPlayer.x + toPlayer.y * toPlayer.y);
+      if(length != .0f){
+        toPlayer /= length;
+        shape.move(toPlayer * speed * dt);
+      }
+    }
+
+    void draw(sf::RenderWindow& window){
+      window.draw(shape);
+    }
+    sf::FloatRect getBounds() const { return shape.getGlobalBounds(); }
+    bool isDead() const { return dead; }
+    void kill() { dead = true; }
+  private:
+    sf::CircleShape shape;
+    float speed = 100.f;
+    bool dead = false;
+};
+
+
 int main() {
+  enum class GameState { Playing, GameOver };
   sf::RenderWindow window(sf::VideoMode({1400, 1000}),
                           "The Binding of Isaac:SHIT");
   sf::RectangleShape bgc({1400.f, 1000.f});
@@ -128,16 +178,18 @@ int main() {
   }
   window.setFramerateLimit(144);
   window.setKeyRepeatEnabled(false);
-
+  GameState state = GameState::Playing;
   Player player;
   std::vector<Projectile> projectiles;
+  std::vector<Enemy> enemies;
+  enemies.emplace_back(sf::Vector2f{800.f, 400.f});
   sf::Vector2f lastDirection{0.f, -1.f};
   sf::Clock clock;
 
 
   while (window.isOpen()) {
     float dt = clock.restart().asSeconds();
-
+    
     while (const std::optional event = window.pollEvent()) {
       if (event->is<sf::Event::Closed>()) {
         window.close();
@@ -161,18 +213,45 @@ int main() {
       }
     }
     player.handleInput(dt);
+    player.updateTimers(dt);
+    sf::Vector2f playerCenter = player.getBounds().position + sf::Vector2f{player.getBounds().size.x / 2.f, player.getBounds().size.y / 2.f};
     player.constraintToWindow(window.getSize());
+    for(auto& enemy : enemies){
+      enemy.update(dt, playerCenter);
+    }
 
     for(auto& p : projectiles){
       p.update(dt);
     }
     std::erase_if(projectiles, [](const Projectile& p) {return p.isDead(); });
 
+    for(auto& enemy : enemies){
+      for(auto& proj : projectiles){
+        if(enemy.getBounds().findIntersection(proj.getBounds())){
+          enemy.kill();
+        }
+      }
+    }
     window.clear();
     window.draw(bgc);
     player.draw(window);
+    for(auto& enemy : enemies){
+      enemy.draw(window);
+    }
     for(auto& p : projectiles){
       p.draw(window);
+    }
+    for(auto& enemy : enemies){
+      if(player.getBounds().findIntersection(enemy.getBounds())){
+        player.takeDamage();
+      }
+    }
+    std::erase_if(enemies, [](const Enemy& e) { return e.isDead(); });
+    for(int i = 0; i < player.getHp(); i++){
+      sf::RectangleShape heart({30.f,30.f});
+      heart.setFillColor(sf::Color::Red);
+      heart.setPosition({20.f + i * 40, 20.f});
+      window.draw(heart);
     }
     window.display();
   }
