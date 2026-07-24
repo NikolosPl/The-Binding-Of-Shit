@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
+#include <random>
+
 
 class Player {
 public:
@@ -59,7 +61,11 @@ public:
     sprite.setPosition(pos);
   }
   void draw(sf::RenderWindow &window) { window.draw(sprite); }
-  void reset() { sprite.setPosition({200.f, 100.f}); }
+  void reset() {
+     sprite.setPosition({200.f, 100.f}); 
+     hp = maxHp;
+     invulnerabilityTimer = 0.f;
+  }
   void takeDamage() {
     if(invulnerabilityTimer <= 0.f){
       hp--;
@@ -91,7 +97,11 @@ private:
 class Projectile {
   public:
     Projectile(sf::Vector2f startPos, sf::Vector2f direction) : shape(8.f){
-      shape.setFillColor(sf::Color::Cyan);
+      if(!textureLoaded){
+        texture.loadFromFile("tear.png");
+        textureLoaded = true;
+      }
+      shape.setTexture(&texture);
       shape.setOrigin({8.f,8.f});
       shape.setPosition(startPos);
       velocity = direction * speed;
@@ -126,7 +136,11 @@ class Projectile {
     bool isDead() const { return state == State::Dead; };
 
     sf::FloatRect getBounds() const { return shape.getGlobalBounds(); }
+
+    void kill() { state = State::Dead; };
   private:
+    static sf::Texture texture;
+    static bool textureLoaded;
     enum class State { Flying, Falling, Dead };
     State state = State::Flying;
 
@@ -136,12 +150,21 @@ class Projectile {
     float flightDuration = .4f;
     float fallDuration = .2f;
     float elapsed = 0.f;
-};
+  };
+  
+
+sf::Texture Projectile::texture;
+bool Projectile::textureLoaded = false;
+
 
 class Enemy {
   public:
-    Enemy(sf::Vector2f startPos) : shape(20.f){
-      shape.setFillColor(sf::Color::Red);
+    Enemy(sf::Vector2f startPos) : shape({50.f,50.f}){
+      if(!textureLoaded){
+        angryFLY.loadFromFile("redFLY.png");
+        textureLoaded = true;
+      }
+      shape.setTexture(&angryFLY);
       shape.setOrigin({20.f,20.f});
       shape.setPosition(startPos);
     }
@@ -161,13 +184,24 @@ class Enemy {
     bool isDead() const { return dead; }
     void kill() { dead = true; }
   private:
-    sf::CircleShape shape;
+    static sf::Texture angryFLY;
+    static bool textureLoaded;
+    sf::RectangleShape shape;
     float speed = 100.f;
     bool dead = false;
 };
 
+sf::Texture Enemy::angryFLY;
+bool Enemy::textureLoaded = false;
 
 int main() {
+  sf::Font font;
+  font.openFromFile("game_over.ttf");
+  sf::Text gameOverText(font, "GAME OVER - naciśnij R", 50);
+  gameOverText.setFillColor(sf::Color::Red);
+  gameOverText.setPosition({400.f,450.f});
+  float spawnTimer = 0.f;
+  const float spawnInterval = 1.f;
   enum class GameState { Playing, GameOver };
   sf::RenderWindow window(sf::VideoMode({1400, 1000}),
                           "The Binding of Isaac:SHIT");
@@ -186,73 +220,111 @@ int main() {
   sf::Vector2f lastDirection{0.f, -1.f};
   sf::Clock clock;
 
+  std::random_device rd;
+  std::mt19937 rng(rd());
+  std::uniform_real_distribution<float> distX(0.f, 1400.f);
+  std::uniform_real_distribution<float> distY(0.f , 1000.f);
 
   while (window.isOpen()) {
     float dt = clock.restart().asSeconds();
-    
+
     while (const std::optional event = window.pollEvent()) {
       if (event->is<sf::Event::Closed>()) {
         window.close();
       }
       if (const auto *keyPressed = event->getIf<sf::Event::KeyPressed>()) {
-        if (keyPressed->scancode == sf::Keyboard::Scan::R) {
-          player.reset();
-        }
         if (keyPressed->scancode == sf::Keyboard::Scan::Escape) {
           window.close();
         }
-        sf::Vector2f fireDir{0.f, 0.f};
-        if (keyPressed->scancode == sf::Keyboard::Scan::Up) fireDir = {0.f, -1.f};
-        if (keyPressed->scancode == sf::Keyboard::Scan::Down) fireDir = {0.f, 1.f};
-        if (keyPressed->scancode == sf::Keyboard::Scan::Left) fireDir = {-1.f, 0.f};
-        if (keyPressed->scancode == sf::Keyboard::Scan::Right) fireDir = {1.f, 0.f};
+        if (keyPressed->scancode == sf::Keyboard::Scan::R) {
+            player.reset();
+            projectiles.clear();
+            enemies.clear();
+            enemies.emplace_back(sf::Vector2f{800.f, 400.f});
+        }
 
-        if(fireDir != sf::Vector2f{0.f, 0.f}){
-          projectiles.emplace_back(player.getCenter(), fireDir);
+        if (state == GameState::Playing) {
+          sf::Vector2f fireDir{0.f, 0.f};
+          if (keyPressed->scancode == sf::Keyboard::Scan::Up)
+            fireDir = {0.f, -1.f};
+          if (keyPressed->scancode == sf::Keyboard::Scan::Down)
+            fireDir = {0.f, 1.f};
+          if (keyPressed->scancode == sf::Keyboard::Scan::Left)
+            fireDir = {-1.f, 0.f};
+          if (keyPressed->scancode == sf::Keyboard::Scan::Right)
+            fireDir = {1.f, 0.f};
+
+          if (fireDir != sf::Vector2f{0.f, 0.f}) {
+            projectiles.emplace_back(player.getCenter(), fireDir);
+          }
         }
       }
     }
-    player.handleInput(dt);
-    player.updateTimers(dt);
-    sf::Vector2f playerCenter = player.getBounds().position + sf::Vector2f{player.getBounds().size.x / 2.f, player.getBounds().size.y / 2.f};
-    player.constraintToWindow(window.getSize());
-    for(auto& enemy : enemies){
-      enemy.update(dt, playerCenter);
-    }
 
-    for(auto& p : projectiles){
-      p.update(dt);
-    }
-    std::erase_if(projectiles, [](const Projectile& p) {return p.isDead(); });
+    if (state == GameState::Playing) {
+      player.handleInput(dt);
+      player.updateTimers(dt);
+      sf::Vector2f playerCenter = player.getBounds().position +
+                                  sf::Vector2f{player.getBounds().size.x / 2.f,
+                                               player.getBounds().size.y / 2.f};
+      player.constraintToWindow(window.getSize());
 
-    for(auto& enemy : enemies){
-      for(auto& proj : projectiles){
-        if(enemy.getBounds().findIntersection(proj.getBounds())){
-          enemy.kill();
+      for (auto &enemy : enemies) {
+        enemy.update(dt, playerCenter);
+      }
+
+      spawnTimer += dt;
+      if (spawnTimer >= spawnInterval) {
+        spawnTimer = 0.f;
+        enemies.emplace_back(sf::Vector2f{distX(rng), distY(rng)});
+      }
+
+      for (auto &p : projectiles) {
+        p.update(dt);
+      }
+      std::erase_if(projectiles,
+                    [](const Projectile &p) { return p.isDead(); });
+
+      for (auto &enemy : enemies) {
+        for (auto &proj : projectiles) {
+          if (enemy.getBounds().findIntersection(proj.getBounds())) {
+            enemy.kill();
+            proj.kill();
+          }
         }
       }
+
+      for (auto &enemy : enemies) {
+        if (player.getBounds().findIntersection(enemy.getBounds())) {
+          player.takeDamage();
+        }
+      }
+      std::erase_if(enemies, [](const Enemy &e) { return e.isDead(); });
+
+      if (player.isDead()) {
+        state = GameState::GameOver;
+      }
     }
+
     window.clear();
     window.draw(bgc);
-    player.draw(window);
-    for(auto& enemy : enemies){
-      enemy.draw(window);
-    }
-    for(auto& p : projectiles){
-      p.draw(window);
-    }
-    for(auto& enemy : enemies){
-      if(player.getBounds().findIntersection(enemy.getBounds())){
-        player.takeDamage();
+
+    if (state == GameState::Playing) {
+      player.draw(window);
+      for (auto &enemy : enemies)
+        enemy.draw(window);
+      for (auto &p : projectiles)
+        p.draw(window);
+      for (int i = 0; i < player.getHp(); i++) {
+        sf::RectangleShape heart({30.f, 30.f});
+        heart.setFillColor(sf::Color::Red);
+        heart.setPosition({20.f + i * 40.f, 20.f});
+        window.draw(heart);
       }
+    } else {
+      window.draw(gameOverText);
     }
-    std::erase_if(enemies, [](const Enemy& e) { return e.isDead(); });
-    for(int i = 0; i < player.getHp(); i++){
-      sf::RectangleShape heart({30.f,30.f});
-      heart.setFillColor(sf::Color::Red);
-      heart.setPosition({20.f + i * 40, 20.f});
-      window.draw(heart);
-    }
+
     window.display();
   }
   return 0;
