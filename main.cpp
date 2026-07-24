@@ -1,4 +1,6 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
+#include <SFML/Window.hpp>
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -195,9 +197,14 @@ sf::Texture Enemy::angryFLY;
 bool Enemy::textureLoaded = false;
 
 int main() {
+  sf::SoundBuffer isaacDeathSound("isaacDEATH.wav");
+  sf::SoundBuffer hitMarkerSound("hitmarker.wav");
+
+  sf::Sound ids(isaacDeathSound);
+  sf::Sound hms(hitMarkerSound);
   sf::Font font;
   font.openFromFile("game_over.ttf");
-  sf::Text gameOverText(font, "GAME OVER - naciśnij R", 50);
+  sf::Text gameOverText(font, "GAME OVER - nacisnij R", 50);
   gameOverText.setFillColor(sf::Color::Red);
   gameOverText.setPosition({400.f,450.f});
   float spawnTimer = 0.f;
@@ -288,6 +295,7 @@ int main() {
       for (auto &enemy : enemies) {
         for (auto &proj : projectiles) {
           if (enemy.getBounds().findIntersection(proj.getBounds())) {
+            hms.play();
             enemy.kill();
             proj.kill();
           }
@@ -302,6 +310,7 @@ int main() {
       std::erase_if(enemies, [](const Enemy &e) { return e.isDead(); });
 
       if (player.isDead()) {
+        ids.play();
         state = GameState::GameOver;
       }
     }
