@@ -208,7 +208,8 @@ int main() {
   gameOverText.setFillColor(sf::Color::Red);
   gameOverText.setPosition({400.f,450.f});
   float spawnTimer = 0.f;
-  const float spawnInterval = 1.f;
+  float spawnInterval = 1.f;
+  float difficultyTimer = 0.f;
   enum class GameState { Playing, GameOver };
   sf::RenderWindow window(sf::VideoMode({1400, 1000}),
                           "The Binding of Isaac:SHIT");
@@ -232,6 +233,24 @@ int main() {
   std::uniform_real_distribution<float> distX(0.f, 1400.f);
   std::uniform_real_distribution<float> distY(0.f , 1000.f);
 
+  int score = 0;
+  sf::Text scoreText(font, "Wynik: 0", 50);
+  scoreText.setFillColor(sf::Color::Black);
+  scoreText.setPosition({150.f, 0.f});
+
+  float survivalTime = 0.f;
+  sf::Text survivalText(font, "Czas: 0.0s", 50);
+  survivalText.setFillColor(sf::Color::Black);
+  survivalText.setPosition({150.f, -20.f});
+
+
+  sf::Text difficultyText(font, "TRUDNOSC ZWIEKSZONA", 40);
+  difficultyText.setFillColor(sf::Color::Yellow);
+  sf::FloatRect diffBounds = difficultyText.getLocalBounds();
+  difficultyText.setOrigin({diffBounds.size.x / 2.f, 0.f});
+  difficultyText.setPosition({700.f, 30.f});
+  float difficultyMessageTimer = 0.f;
+
   while (window.isOpen()) {
     float dt = clock.restart().asSeconds();
 
@@ -246,6 +265,10 @@ int main() {
         if (keyPressed->scancode == sf::Keyboard::Scan::R) {
             player.reset();
             projectiles.clear();
+            score = 0;
+            scoreText.setString("Wynik: 0");
+            survivalTime = 0.f;
+            survivalText.setString("Czas: 0.0s");
             enemies.clear();
             enemies.emplace_back(sf::Vector2f{800.f, 400.f});
         }
@@ -280,7 +303,15 @@ int main() {
         enemy.update(dt, playerCenter);
       }
 
+      survivalTime += dt;
+      survivalText.setString("Czas: " + std::to_string(survivalTime).substr(0, 4) + "s");
       spawnTimer += dt;
+      difficultyTimer += dt;
+      if(difficultyTimer >= 10.f){
+        difficultyTimer = 0.f;
+        spawnInterval = std::max(0.2f, spawnInterval - 0.1f);
+        difficultyMessageTimer = 2.f;
+      }
       if (spawnTimer >= spawnInterval) {
         spawnTimer = 0.f;
         enemies.emplace_back(sf::Vector2f{distX(rng), distY(rng)});
@@ -289,14 +320,22 @@ int main() {
       for (auto &p : projectiles) {
         p.update(dt);
       }
+
+      if(difficultyMessageTimer > 0.f){
+        difficultyMessageTimer -= dt;
+      }
+
       std::erase_if(projectiles,
                     [](const Projectile &p) { return p.isDead(); });
 
       for (auto &enemy : enemies) {
+        if(enemy.isDead()) continue;
         for (auto &proj : projectiles) {
           if (enemy.getBounds().findIntersection(proj.getBounds())) {
             hms.play();
             enemy.kill();
+            score += 10;
+            scoreText.setString("Wynik: " + std::to_string(score));
             proj.kill();
           }
         }
@@ -317,18 +356,23 @@ int main() {
 
     window.clear();
     window.draw(bgc);
-
+    
     if (state == GameState::Playing) {
       player.draw(window);
       for (auto &enemy : enemies)
-        enemy.draw(window);
+      enemy.draw(window);
       for (auto &p : projectiles)
-        p.draw(window);
+      p.draw(window);
       for (int i = 0; i < player.getHp(); i++) {
         sf::RectangleShape heart({30.f, 30.f});
         heart.setFillColor(sf::Color::Red);
         heart.setPosition({20.f + i * 40.f, 20.f});
         window.draw(heart);
+        window.draw(scoreText);
+        window.draw(survivalText);
+        if(difficultyMessageTimer > 0.f){
+          window.draw(difficultyText);
+        }
       }
     } else {
       window.draw(gameOverText);
