@@ -186,10 +186,11 @@ int main() {
         enemy.draw(window);
       for (auto &p : projectiles)
         p.draw(window);
-
+      sf::Texture heartT;
+      heartT.loadFromFile("heart.png");
       for (int i = 0; i < player.getHp(); i++) {
         sf::RectangleShape heart({30.f, 30.f});
-        heart.setFillColor(sf::Color::Red);
+        heart.setTexture(&heartT);
         heart.setPosition({20.f + i * 40.f, 20.f});
         window.draw(heart);
       }
