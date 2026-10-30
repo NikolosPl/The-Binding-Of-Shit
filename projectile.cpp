@@ -6,7 +6,7 @@ bool Projectile::textureLoaded = false;
 Projectile::Projectile(sf::Vector2f startPos, sf::Vector2f direction)
     : shape(8.f) {
   if (!textureLoaded) {
-    texture.loadFromFile("tear.png");
+    texture.loadFromFile("../tear.png");
     textureLoaded = true;
   }
   shape.setTexture(&texture);

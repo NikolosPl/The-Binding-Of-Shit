@@ -1,10 +1,10 @@
 #include "player.hpp"
 
 Player::Player() : sprite(textureFRONT) {
-  textureFRONT.loadFromFile("isaacFRONT.png");
-  textureBACK.loadFromFile("isaacBACK.png");
-  textureLEFT.loadFromFile("isaacLEFT.png");
-  textureRIGHT.loadFromFile("isaacRIGHT.png");
+  textureFRONT.loadFromFile("../isaacFRONT.png");
+  textureBACK.loadFromFile("../isaacBACK.png");
+  textureLEFT.loadFromFile("../isaacLEFT.png");
+  textureRIGHT.loadFromFile("../isaacRIGHT.png");
 
   sprite.setTexture(textureFRONT, true);
   sprite.setScale({.5f, .5f});

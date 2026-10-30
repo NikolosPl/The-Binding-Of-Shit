@@ -10,14 +10,13 @@
 #include "projectile.hpp"
 
 int main() {
-  sf::SoundBuffer isaacDeathSound("isaacDEATH.wav");
-  sf::SoundBuffer hitMarkerSound("hitmarker.wav");
+  sf::SoundBuffer hitMarkerSound("../hitmarker.wav");
 
-  sf::Sound ids(isaacDeathSound);
+  // sf::Sound ids(isaacDeathSound);
   sf::Sound hms(hitMarkerSound);
 
   sf::Font font;
-  font.openFromFile("game_over.ttf");
+  font.openFromFile("../game_over.ttf");
 
   sf::Text gameOverText(font, "GAME OVER - nacisnij R", 50);
   gameOverText.setFillColor(sf::Color::Red);
@@ -33,7 +32,7 @@ int main() {
                           "The Binding of Isaac:SHIT");
   sf::RectangleShape bgc({1400.f, 1000.f});
   sf::Texture floor;
-  if (floor.loadFromFile("basement.png")) {
+  if (floor.loadFromFile("../basement.png")) {
     bgc.setTexture(&floor);
   }
 
@@ -172,7 +171,6 @@ int main() {
       std::erase_if(enemies, [](const Enemy &e) { return e.isDead(); });
 
       if (player.isDead()) {
-        ids.play();
         state = GameState::GameOver;
       }
     }
@@ -187,7 +185,7 @@ int main() {
       for (auto &p : projectiles)
         p.draw(window);
       sf::Texture heartT;
-      heartT.loadFromFile("heart.png");
+      // heartT.loadFromFile("../heart.png");
       for (int i = 0; i < player.getHp(); i++) {
         sf::RectangleShape heart({30.f, 30.f});
         heart.setTexture(&heartT);

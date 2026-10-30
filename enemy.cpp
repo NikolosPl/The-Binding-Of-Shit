@@ -5,7 +5,7 @@ bool Enemy::textureLoaded = false;
 
 Enemy::Enemy(sf::Vector2f startPos) : shape({50.f, 50.f}) {
   if (!textureLoaded) {
-    angryFLY.loadFromFile("redFLY.png");
+    angryFLY.loadFromFile("../redFLY.png");
     textureLoaded = true;
   }
   shape.setTexture(&angryFLY);
